@@ -1,0 +1,94 @@
+name: Build iOS IPA from Unity archive
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - CallCenterChaos_iOS_IPA_BuildReady.zip
+
+permissions:
+  contents: read
+
+jobs:
+  unity-export:
+    name: Export iOS Xcode project from Unity
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source archive and extract Unity project
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=CallCenterChaos_iOS_IPA_BuildReady.zip
+          if [[ ! -f "$FILE" ]]; then
+            echo "::error::Please upload $FILE to the repository root first."
+            exit 1
+          fi
+          unzip -tq "$FILE"
+          unzip -q -o "$FILE"
+          test -d CallCenterChaos_iOS_BuildReady/Assets
+          test -d CallCenterChaos_iOS_BuildReady/ProjectSettings
+          # Copy the project into the repository root; keep this live workflow.
+          rsync -a --exclude='.github/' --exclude='.gitignore' CallCenterChaos_iOS_BuildReady/ ./
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          base = Path("Assets/Resources/Callers")
+          profiles = json.loads((base / "caller_profiles.json").read_text(encoding="utf-8"))["callers"]
+          portraits = list((base / "Portraits").glob("caller_*.png"))
+          assert len(profiles) == 144, f"Expected 144 caller profiles, got {len(profiles)}"
+          assert len(portraits) == 144, f"Expected 144 portraits, got {len(portraits)}"
+          for f in ["Assets/Editor/CCCBuildIOS.cs", "Assets/Scripts/OfficePrototype.cs",
+                    "Packages/manifest.json", "ProjectSettings/ProjectVersion.txt",
+                    "Tools/package_unsigned_ipa.sh"]:
+              assert Path(f).exists(), f"Missing required project file: {f}"
+          print("Validated 144 character profiles, 144 portraits and Unity build scripts.")
+          PY
+      - name: Unity iOS Xcode export
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: 2022.3.62f1
+          targetPlatform: iOS
+          buildMethod: CCCBuildIOS.Export
+      - name: Upload Xcode project
+        uses: actions/upload-artifact@v4
+        with:
+          name: CallCenterChaos-Xcode-iOS
+          path: build/iOS/CallCenterChaos/
+          if-no-files-found: error
+          retention-days: 7
+
+  xcode-unsigned-ipa:
+    name: Compile IPA on macOS
+    runs-on: macos-latest
+    needs: unity-export
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Unity Xcode project
+        uses: actions/download-artifact@v4
+        with:
+          name: CallCenterChaos-Xcode-iOS
+          path: build/iOS/CallCenterChaos
+      - name: Extract Xcode IPA packaging script
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -p CallCenterChaos_iOS_IPA_BuildReady.zip CallCenterChaos_iOS_BuildReady/Tools/package_unsigned_ipa.sh > package_unsigned_ipa.sh
+          test -s package_unsigned_ipa.sh
+      - name: Compile unsigned application
+        run: bash package_unsigned_ipa.sh build/iOS/CallCenterChaos output/CallCenterChaos-UNSIGNED.ipa
+      - name: Upload unsigned IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CallCenterChaos-UNSIGNED-IPA
+          path: output/CallCenterChaos-UNSIGNED.ipa
+          if-no-files-found: error
+          retention-days: 7

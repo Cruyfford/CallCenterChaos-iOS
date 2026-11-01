@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - CallCenterChaos_iOS_IPA_BuildReady.zip
+      - CallCenterChaos-iPhone.zip
 
 permissions:
   contents: read
@@ -21,7 +22,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          FILE=CallCenterChaos_iOS_IPA_BuildReady.zip
+          FILE=CallCenterChaos-iPhone.zip
+          if [[ ! -f "$FILE" ]]; then FILE=CallCenterChaos_iOS_IPA_BuildReady.zip; fi
           if [[ ! -f "$FILE" ]]; then
             echo "::error::Please upload $FILE to the repository root first."
             exit 1
@@ -81,7 +83,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          unzip -p CallCenterChaos_iOS_IPA_BuildReady.zip CallCenterChaos_iOS_BuildReady/Tools/package_unsigned_ipa.sh > package_unsigned_ipa.sh
+          FILE=CallCenterChaos-iPhone.zip
+          if [[ ! -f "$FILE" ]]; then FILE=CallCenterChaos_iOS_IPA_BuildReady.zip; fi
+          unzip -p "$FILE" CallCenterChaos_iOS_BuildReady/Tools/package_unsigned_ipa.sh > package_unsigned_ipa.sh
           test -s package_unsigned_ipa.sh
       - name: Compile unsigned application
         run: bash package_unsigned_ipa.sh build/iOS/CallCenterChaos output/CallCenterChaos-UNSIGNED.ipa

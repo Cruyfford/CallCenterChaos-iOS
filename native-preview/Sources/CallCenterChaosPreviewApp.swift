@@ -346,7 +346,7 @@ struct Office3DView: UIViewRepresentable {
         let hairs: [UIColor] = [.brown, .black, .darkGray, .systemBrown, .systemGray]
         for i in 0..<6 {
             let x = Float((i % 3) * 4 - 4)
-            let z = Float((i / 3) * 4 - 2.1)
+            let z = Float((i / 3) * 4) - 2.1
             cube(SCNVector3(2.7, 0.19, 1.35), SCNVector3(x, 0.8, z),
                  UIColor(red: 0.5, green: 0.32, blue: 0.22, alpha: 1), parent: root)
             for dx: Float in [-1.12, 1.12] {

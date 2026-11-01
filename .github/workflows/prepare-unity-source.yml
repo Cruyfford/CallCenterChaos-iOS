@@ -1,0 +1,67 @@
+name: Prepare Unity source for cloud builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/prepare-unity-source.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-unity-source
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Extract Unity project from uploaded ZIP
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Extract and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP=CallCenterChaos-iPhone.zip
+          test -s "$ZIP"
+          unzip -tq "$ZIP"
+          unzip -q -o "$ZIP" -d /tmp/ccc-source
+          ROOT=/tmp/ccc-source/CallCenterChaos_iOS_BuildReady
+          test -d "$ROOT/Assets"
+          test -d "$ROOT/Packages"
+          test -d "$ROOT/ProjectSettings"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("/tmp/ccc-source/CallCenterChaos_iOS_BuildReady/Assets/Resources/Callers")
+          j=json.loads((p/"caller_profiles.json").read_text(encoding="utf-8"))
+          assert len(j["callers"])==144, "Unexpected caller count"
+          assert len(list((p/"Portraits").glob("caller_*.png")))==144, "Unexpected portrait count"
+          print("Unity archive validated: 144 caller profiles and 144 portraits.")
+          PY
+          mkdir -p Assets Packages ProjectSettings
+          rsync -a "$ROOT/Assets/" Assets/
+          rsync -a "$ROOT/Packages/" Packages/
+          rsync -a "$ROOT/ProjectSettings/" ProjectSettings/
+          test -f Assets/Editor/CCCCloudBuild.cs
+          test -f Assets/Editor/CCCBuildIOS.cs
+          test -f ProjectSettings/ProjectVersion.txt
+          echo "Unity source extracted to repository root."
+      - name: Commit Unity source for Unity Cloud Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A Assets Packages ProjectSettings
+          if git diff --cached --quiet; then
+            echo "Unity source already committed."
+            exit 0
+          fi
+          git commit -m "Extract Unity source for Unity Build Automation"
+          git push origin HEAD:main

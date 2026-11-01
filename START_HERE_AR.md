@@ -4,7 +4,7 @@
 
 ## ما الذي تفعله من الآيفون؟
 
-1. حمّل `CallCenterChaos_iOS_IPA_BuildReady.zip` من المحادثة (حوالي 5.7 ميغابايت).
+1. حمّل `CallCenterChaos-iPhone.zip` من المحادثة (حوالي 5.7 ميغابايت).
 2. افتح: https://github.com/Cruyfford/CallCenterChaos-iOS/upload/main
 3. اختر **Add file → Upload files** وأرفق ملف ZIP كما هو، **دون فك الضغط ودون تغيير الاسم**. اضغط Commit changes.
 4. سيحاول GitHub Actions تشغيل **Build iOS IPA from Unity archive** تلقائيًا عند رفع الأرشيف.

@@ -7,6 +7,7 @@ on:
     paths:
       - CallCenterChaos_iOS_IPA_BuildReady.zip
       - CallCenterChaos-iPhone.zip
+      - .github/workflows/ios-ipa.yml
 
 permissions:
   contents: read
@@ -59,6 +60,7 @@ jobs:
           unityVersion: 2022.3.62f1
           targetPlatform: iOS
           buildMethod: CCCBuildIOS.Export
+          versioning: None
       - name: Upload Xcode project
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,93 @@
+name: Build unsigned iPhone preview IPA (no Unity licence)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - native-preview/**
+      - Assets/Resources/Callers/**
+      - .github/workflows/native-ios-preview.yml
+
+permissions:
+  contents: read
+
+jobs:
+  unsigned-preview:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare caller assets for native preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=Assets/Resources/Callers
+          test -f "$ROOT/caller_profiles.json"
+          test -d "$ROOT/Portraits"
+          mkdir -p native-preview/Resources/Portraits
+          cp "$ROOT/caller_profiles.json" native-preview/Resources/caller_profiles.json
+          cp "$ROOT"/Portraits/caller_*.png native-preview/Resources/Portraits/
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("native-preview/Resources")
+          callers = json.loads((p / "caller_profiles.json").read_text())["callers"]
+          images = list((p / "Portraits").glob("caller_*.png"))
+          assert len(callers) == 144 and len(images) == 144, (len(callers), len(images))
+          print("Validated 144 caller portraits and Arabic profiles.")
+          PY
+      - name: Install XcodeGen
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then brew install xcodegen; fi
+          xcodegen --version
+          xcodebuild -version
+      - name: Generate Xcode project
+        run: xcodegen generate --spec native-preview/project.yml --project native-preview
+      - name: Build with code signing disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project native-preview/CallCenterChaosPreview.xcodeproj \
+            -scheme CallCenterChaosPreview \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$PWD/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build > xcode-build.log 2>&1 || { tail -n 160 xcode-build.log; exit 1; }
+          tail -n 30 xcode-build.log
+      - name: Assemble unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=DerivedData/Build/Products/Release-iphoneos/CallCenterChaosPreview.app
+          test -d "$APP"
+          test -f "$APP/CallCenterChaosPreview"
+          test -f "$APP/Resources/caller_profiles.json"
+          test -f "$APP/Resources/Portraits/caller_001.png"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/
+          cd dist
+          /usr/bin/zip -q -r "CallCenterChaos-Unsigned-Preview.ipa" Payload
+          unzip -tq "CallCenterChaos-Unsigned-Preview.ipa"
+          ls -lh "CallCenterChaos-Unsigned-Preview.ipa"
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CallCenterChaos-Unsigned-Preview-IPA
+          path: dist/CallCenterChaos-Unsigned-Preview.ipa
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Xcode log for diagnosis
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Native-Preview-Xcode-Build-Log
+          path: xcode-build.log
+          if-no-files-found: ignore
+          retention-days: 7

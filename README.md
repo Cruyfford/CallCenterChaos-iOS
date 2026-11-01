@@ -4,7 +4,7 @@ This repository is for an **independent Unity prototype**, not the original comm
 
 ## Prepare the source
 
-The project archive is **not yet present in this repository**. From your iPhone, open **Add file → Upload files** and upload `CallCenterChaos_iOS_IPA_BuildReady.zip` into the repository root. **Do not rename it.** This archive has a top-level `CallCenterChaos_iOS_BuildReady/` folder which the CI workflow extracts automatically. Keep your API keys out of Git.
+The project archive is **not yet present in this repository**. From your iPhone, open **Add file → Upload files** and upload `CallCenterChaos-iPhone.zip` into the repository root. **Do not rename it.** This archive has a top-level `CallCenterChaos_iOS_BuildReady/` folder which the CI workflow extracts automatically. Keep your API keys out of Git.
 
 ## Build with GitHub Actions
 

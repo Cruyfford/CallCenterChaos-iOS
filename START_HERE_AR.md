@@ -1,3 +1,18 @@
+## الحالة بعد رفع الملف — 1 نوفمبر 2026
+
+- تم رفع `CallCenterChaos-iPhone.zip` بنجاح، وفحصت GitHub Actions الأرشيف و144 صورة و144 ملف تعريف دون أخطاء.
+- فشل البناء الأول بسبب `Branch is dirty`، وتم إصلاح المشكلة بتحديد `versioning: None` في `.github/workflows/ios-ipa.yml`.
+- [البناء الثاني رقم 2](https://github.com/Cruyfford/CallCenterChaos-iOS/actions/runs/41301499452) فشل بسبب: **Missing Unity License File and no Serial was found**. لا توجد نسخة IPA الآن.
+
+### المطلوب لإكمال بناء Unity
+
+إذا كان لديك ترخيص **Unity Personal المجاني**، فعّله بواسطة Unity Hub على حاسوب مناسب واحصل على ملف `Unity_lic.ulf`، ثم أضف في [GitHub Actions Secrets](https://github.com/Cruyfford/CallCenterChaos-iOS/settings/secrets/actions) هذه القيم: `UNITY_LICENSE` (النص الكامل من ULF)، `UNITY_EMAIL` و`UNITY_PASSWORD` بحسب تعليمات GameCI. إذا لديك Unity Pro، استخدم `UNITY_SERIAL` مع `UNITY_EMAIL` و`UNITY_PASSWORD` بدل ذلك. **لا ترسل الأسرار داخل المحادثة أو مستودع GitHub العام.**
+
+دليل GameCI الرسمي: https://game.ci/docs/github/activation/
+
+بعد إعداد الأسرار، افتح [سجل البناء](https://github.com/Cruyfford/CallCenterChaos-iOS/actions/workflows/ios-ipa.yml)، واضغط **Run workflow**. النجاح غير مضمون قبل اختبار تصدير Unity وتجميع Xcode.
+
+
 # البدء في بناء Call Center Chaos للآيفون
 
 تم ربط المستودع وإضافة [ملف GitHub Actions](.github/workflows/ios-ipa.yml). **لم ينتج IPA بعد**.
